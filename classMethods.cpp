@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-13T21:08:38-05:00
+* @Last modified time: 2017-02-14T18:20:25-05:00
 */
 
 
@@ -20,8 +20,8 @@ using namespace std;
 // ------------------------ Class: bankAccount ------------------------------
 // Constructor
 bankAccount :: bankAccount(int accountNumber, int initBalance){
-  number = accountNumber;
-  balance = initBalance;
+  this->number = accountNumber;
+  this->balance = initBalance;
   bool mutexStatus = pthread_mutex_init(&mutex, NULL);
   if(mutexStatus != 0){
     dbg_trace("Mutex init failed!");
@@ -47,6 +47,12 @@ int bankAccount :: lock(){
   return pthread_mutex_lock(&mutex);
 }
 
+// try to lock the account access; returns otherwise
+int bankAccount :: trylock(){
+  // try to lock mutex
+  return pthread_mutex_trylock(&mutex);
+}
+
 // releases the account access to the account
 int bankAccount :: unlock(){
   // unlock mutex
@@ -56,17 +62,100 @@ int bankAccount :: unlock(){
 // retrieves account balance
 int bankAccount :: getBalance(){
   // get the current balance
-  return balance;
+  return this->balance;
 }
 
 // retrieves account number
 int bankAccount :: getAccountNumber(){
   // get the current balance
-  return number;
+  return this->number;
 }
 
 // Destructor
 void bankAccount :: setBalance(int newBalance){
   // update the balance
-  balance = newBalance;
+  this->balance = newBalance;
+}
+
+
+// ------------------------ Class: workerQueue ------------------------------
+// Constructor
+workerQueue :: workerQueue(int ID){
+  this->workerID = ID;
+  bool mutexStatus = pthread_mutex_init(&mutex, NULL);
+  if(mutexStatus != 0){
+    dbg_trace("Mutex init failed! Worker ID: " << workerID);
+    exit(1);
+  }
+  bool condStatus = pthread_cond_init(&emptyCondition, NULL);
+  if(condStatus != 0){
+    dbg_trace("Cond init failed! Worker ID: " << workerID);
+    exit(1);
+  }
+}
+
+// Destructor
+workerQueue :: ~workerQueue(){
+  // Cleanup
+  pthread_mutex_destroy(&mutex);
+  pthread_cond_destroy(&emptyCondition);
+}
+
+// locks the account access
+int workerQueue :: lock(){
+  // lock mutex
+  return pthread_mutex_lock(&mutex);
+}
+
+// try to lock the account access; returns otherwise
+int workerQueue :: trylock(){
+  // try to lock mutex
+  return pthread_mutex_trylock(&mutex);
+}
+
+// releases the account access to the account
+int workerQueue :: unlock(){
+  // unlock mutex
+  return pthread_mutex_unlock(&mutex);
+}
+
+// retrieves account balance
+int workerQueue :: getWorkerID(){
+  // get the current balance
+  return this->workerID;
+}
+
+// Adds a new request at the from the back of the queue
+void workerQueue :: pushRequest(EFTRequest_t* newRequest)
+{
+  // Add the new request to the queue
+  this->lock();                           // ENTER Critical Section
+  this->Queue.push(newRequest);                 // Add new request to the queue
+  pthread_cond_signal(&emptyCondition);            // signal the worker thread to proceed
+  this->unlock();                         // EXIT Critical Section
+}
+
+// Removes the request from the front of the queue
+EFTRequest_t* workerQueue :: popRequest()
+{
+  EFTRequest_t *request = NULL;
+  // Check if the queue is emptyCondition & proceed if not
+  this->lock();
+  while(this->empty()){
+    pthread_cond_wait(&emptyCondition, &mutex);
+  }
+  request = Queue.front();
+  this->Queue.pop();
+  this->unlock();
+  return request;
+}
+
+// checks if the queue is empty
+bool workerQueue :: empty(){
+  return this->Queue.empty();
+}
+
+// returns queue size
+int workerQueue :: size(){
+  return this->Queue.size();
 }

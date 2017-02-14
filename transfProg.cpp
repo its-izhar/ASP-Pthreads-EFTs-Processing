@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-13T21:16:33-05:00
+* @Last modified time: 2017-02-14T18:43:12-05:00
 */
 
 
@@ -16,19 +16,26 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <assert.h>
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
 
 using namespace std;
 
+
 /* Parse the input file into bank account pool and EFT requests pool */
-int parseInputFile(const char *fileName, bankAccountPool_t &accountPool)
+int parseInputFile(const char *fileName, threadData_t *threadData, \
+  bankAccountPool_t &accountPool, int NumberOfThreads)
 {
   // Input file stream & buffer
   std::ifstream fileStream;
   std::stringstream stringParser;
   char line[LINE_BUFFER] = { 0 };
   int accountNumber = -1, initBalance = 0;
+  int fromAccount = -1, toAccount = -1, transferAmount = 0;
+  std::string transferString;
+  bool initDone = false;
+  int assignID = -1;
 
   // Open the fileStream
   fileStream.open(fileName, std::ifstream::in);
@@ -40,25 +47,73 @@ int parseInputFile(const char *fileName, bankAccountPool_t &accountPool)
   while(fileStream.good() && !fileStream.eof())
   {
     fileStream.getline(line, LINE_BUFFER);          // read a line
-    //dbg_trace("String: " << line);
-    stringParser.str(line);                         // convert c-like string to stringParser
-    stringParser >> accountNumber >> initBalance;
-    dbg_trace("Account Number: " \
-    << accountNumber << " , " << "Init Balance: " << initBalance);
+    dbg_trace("String: " << line);
+    // Check if the transfer requests are coming
+    if (isalpha(line[0]) && line[0]=='T' ){
+      initDone = true;
+    }
+    stringParser.str(line);            // convert c-like string to stringParser
 
-    // Adding the object to the map here
-    accountPool.emplace(std::make_pair(accountNumber, bankAccount(accountNumber, initBalance)));
-    dbg_trace("POOL: \
-    Account Number: " << accountPool[accountNumber].getAccountNumber() \
-    << " , " << \
-    "Init Balance: " << accountPool[accountNumber].getBalance());
+    // If we're not done reading accounts yet, keep reading and add to accountPool
+    if(!initDone)
+    {
+      stringParser >> accountNumber >> initBalance;
+      dbg_trace("Account Number: " \
+      << accountNumber << " , " << "Init Balance: " << initBalance);
+
+      // Adding the object to the map here
+      accountPool.emplace(std::make_pair(accountNumber, \
+        bankAccount(accountNumber, initBalance)));
+
+      dbg_trace("POOL: \
+      Account Number: " << accountPool[accountNumber].getAccountNumber() \
+      << " , " << \
+      "Init Balance: " << accountPool[accountNumber].getBalance());
+    }
+    else
+    {
+      // Once we are done reading accounts; read EFT requests
+      stringParser >> transferString >> fromAccount >> toAccount >> transferAmount;
+      dbg_trace("From: " << fromAccount << \
+      " To: " << toAccount << " Amount: " << transferAmount);
+
+      // Stop reading once we're done
+      if(fromAccount == -1 || toAccount == -1){
+        break;
+      }
+      // Calculate worker ID to be assigned
+      // Since we will be assigning the jobs in round robin fashion,
+      // we will mod the result with NumberOfThreads
+      assignID = (assignID + 1) % NumberOfThreads;
+
+      assert(threadData[assignID].threadID == assignID);    // Sanity checks
+      assert(threadData[assignID].threadID \
+        == threadData[assignID].EFTRequests->getWorkerID());
+
+      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      << "Job Assigned ID: " << assignID << ","\
+      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
+
+      // Create new EFT request
+      EFTRequest_t* newRequest = new EFTRequest_t();
+      newRequest->workerID = assignID;
+      newRequest->fromAccount = fromAccount;
+      newRequest->toAccount = toAccount;
+      newRequest->transferAmount = transferAmount;
+
+      // Start writing;
+      // NOTE:: this is data-race safe since the workerQueue class implements
+      // safe IPC using mutex and condition varibales
+      threadData[assignID].EFTRequests->pushRequest(newRequest);
+    }
 
     // Clear the buffer here, before reading the next line
     memset(line, '\0', LINE_BUFFER);
     stringParser.str("");       // Clear the stringstream
     stringParser.clear();       // needed to clear the stringstream
-    accountNumber = -1;
-    initBalance = 0;
+    accountNumber = fromAccount = toAccount = -1;
+    initBalance = transferAmount = 0;
   }
   // Check why we got out
   if(fileStream.eof()){
@@ -66,6 +121,7 @@ int parseInputFile(const char *fileName, bankAccountPool_t &accountPool)
   }
   else {
     dbg_trace("Error while reading!");
+    fileStream.close();
     return FAIL;
   }
   // Close the fileStream
@@ -89,6 +145,7 @@ void displayAccountPool(bankAccountPool_t &accountPool)
 }
 
 
+
 // ------------------------ main() ------------------------------
 int main(int argc, char const *argv[])
 {
@@ -107,14 +164,24 @@ int main(int argc, char const *argv[])
   }
   // Check the validity of the worker threads
   int workerThreads = atoi((const char *) argv[2]);
-  if(workerThreads < 1){
+  if(workerThreads < 1 || workerThreads > MAX_WORKERS){
     print_output("Invalid number of workers: " << workerThreads \
-     << "\nEnter buffer size at least greater than or equal to 1.");
+     << "\nEnter buffer size between 1 to " << MAX_WORKERS);
     return 0;
   }
-  // If everything is fine, parse the file & init threads
+  // If everything is fine, init threads
   bankAccountPool_t accountPool;
-  int parseStatus = parseInputFile(argv[1], accountPool);
+  threadData_t threadData[workerThreads];
+  pthread_t threads[workerThreads];
+
+  bool status = spawnThreads(threads, threadData, accountPool, workerThreads);
+  if(status == FAIL){
+    dbg_trace("Failed to create threads!");
+    return 0;
+  }
+
+  // And parse the file
+  int parseStatus = parseInputFile(argv[1], threadData, accountPool, workerThreads);
   if(parseStatus == FAIL)
   {
     print_output("ERROR: Failed during parsing!");
@@ -122,6 +189,14 @@ int main(int argc, char const *argv[])
   }
   // Display account pool details
   displayAccountPool(accountPool);
+
+  // wait for threads to finish
+  for(int i=0; i<workerThreads; i++){
+    pthread_join(threads[i], NULL);
+  }
+
+  // Cleanup
+  destroyWorkerQueues(threadData, workerThreads);
 
   return 0;
 }

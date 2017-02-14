@@ -3,16 +3,16 @@
 # @Email:  izharits@gmail.com
 # @Filename: Makefile
 # @Last modified by:   Izhar Shaikh
-# @Last modified time: 2017-02-13T17:35:03-05:00
+# @Last modified time: 2017-02-14T18:37:46-05:00
 
 
 # Add the new TARGETS here
 TARGETS = transfProg
 CC = g++
 HEADERS = -I.
-CFLAGS = -Wall -Werror -std=c++11 -lpthread -Og
+CFLAGS = -Wall -Werror -std=c++11 -pthread -Og
 DEBUG_FLAGS = -g -DDEBUG
-SOURCES = transfProg.cpp classMethods.cpp
+SOURCES = transfProg.cpp classMethods.cpp processThreads.cpp
 
 all: clean $(TARGETS)
 

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T19:22:11-05:00
+* @Last modified time: 2017-02-15T01:23:52-05:00
 */
 
 
@@ -22,10 +22,12 @@
 
 using namespace std;
 
+// Global job count
+int GlobalEFTRequestsCount = 0;
 
 /* Parse the input file into bank account pool and EFT requests pool */
 int parseInputFile(const char *fileName, threadData_t *threadData, \
-  bankAccountPool_t &accountPool, int NumberOfThreads)
+  bankAccountPool_t &accountPool, int NumberOfThreads, int &requestCount)
 {
   // Input file stream & buffer
   std::ifstream fileStream;
@@ -85,6 +87,7 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
       // Since we will be assigning the jobs in round robin fashion,
       // we will mod the result with NumberOfThreads
       assignID = (assignID + 1) % NumberOfThreads;
+      ++requestCount;
 
       assert(threadData[assignID].threadID == assignID);    // Sanity checks
       assert(threadData[assignID].threadID \
@@ -118,6 +121,7 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
   // Check why we got out
   if(fileStream.eof()){
     dbg_trace("Reached End-of-File!");
+    dbg_trace("Total Transfer Requests: " << requestCount);
   }
   else {
     dbg_trace("Error while reading!");
@@ -144,7 +148,7 @@ void displayAccountPool(bankAccountPool_t &accountPool)
   }
 }
 
-
+bool mainDone = false;
 
 // ------------------------ main() ------------------------------
 int main(int argc, char const *argv[])
@@ -173,15 +177,17 @@ int main(int argc, char const *argv[])
   bankAccountPool_t accountPool;
   threadData_t threadData[workerThreads];
   pthread_t threads[workerThreads];
+  int EFTRequestsCount = 0;
 
-  bool status = spawnThreads(threads, threadData, accountPool, workerThreads);
+  bool status = spawnThreads(threads, threadData, &accountPool, workerThreads);
   if(status == FAIL){
     dbg_trace("Failed to create threads!");
     return 0;
   }
 
   // And parse the file
-  int parseStatus = parseInputFile(argv[1], threadData, accountPool, workerThreads);
+  int parseStatus = parseInputFile(argv[1], threadData, accountPool, \
+    workerThreads, EFTRequestsCount);
   if(parseStatus == FAIL)
   {
     print_output("ERROR: Failed during parsing!");
@@ -189,12 +195,20 @@ int main(int argc, char const *argv[])
   }
   // Display account pool details
   // NOTE:: REMOVE Comment
+  sleep(5);
   //displayAccountPool(accountPool);
+  threadData[0].EFTRequests->lock();
+  mainDone = true;
+  threadData[0].EFTRequests->sendSignal();
+  threadData[0].EFTRequests->unlock();
 
   // wait for threads to finish
   for(int i=0; i<workerThreads; i++){
     pthread_join(threads[i], NULL);
   }
+
+  // Display the Accounts and their Balances after transfer
+  displayAccountPool(accountPool);
 
   // Cleanup
   destroyWorkerQueues(threadData, workerThreads);

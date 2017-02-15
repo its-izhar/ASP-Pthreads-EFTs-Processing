@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T18:18:21-05:00
+* @Last modified time: 2017-02-15T00:42:23-05:00
 */
 
 
@@ -70,6 +70,8 @@ public:
   int size();                       // returns the current size of the queue
   void pushRequest(EFTRequest_t *request); // Adds the item to the the back
   EFTRequest_t *popRequest();              // removes the item from the front
+  //TODO:: Remove
+  void sendSignal();
 };
 
 // Thread Data
@@ -82,5 +84,6 @@ typedef struct threadData {
 
 // Functions for threads processing
 int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
-  bankAccountPool_t &accountPool, int NumberOfThreads);
+  bankAccountPool_t *accountPool, int NumberOfThreads);
 void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads);
+void displayAccountPool(bankAccountPool_t &accountPool);

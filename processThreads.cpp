@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T19:21:50-05:00
+* @Last modified time: 2017-02-15T01:24:27-05:00
 */
 
 
@@ -17,29 +17,86 @@
 
 using namespace std;
 
+extern int GlobalEFTRequestsCount;
 
 // Thread function (EFT requests processor)
-// TODO:: Free up the EFT request in thread
 static void *EFTWorker(void *data)
 {
   threadData_t *workerData = (threadData_t *) data;
-  sleep(1);
-  dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
-  << "Queue-ID: " << workerData->EFTRequests->getWorkerID() << " , "\
-  << "Queue-size: " << workerData->EFTRequests->size() << " , "\
-  << "Account Pool: " << workerData->accountPool->size());
-  dbg_trace("Thread " << workerData->threadID << " woke up!");
+  EFTRequest_t *requestToProcess = NULL;
+
+  while((requestToProcess = workerData->EFTRequests->popRequest()) != NULL)
+  {
+    dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
+    << "Queue-ID: " << workerData->EFTRequests->getWorkerID() << " , "\
+    << "Queue-size: " << workerData->EFTRequests->size() << " , "\
+    << "Account Pool: " << workerData->accountPool->size());
+
+    int fromBalance = 0, toBalance = 0;
+    int fromAccount = requestToProcess->fromAccount;
+    int toAccount = requestToProcess->toAccount;
+    int transferAmount = requestToProcess->transferAmount;
+
+    dbg_trace("[requestToProcess]: "\
+    << "From: " << fromAccount << " , "\
+    << "To: " << toAccount << " , "\
+    << "Transfer: " << transferAmount);
+
+    // -- Process the request with "restricted order" of accounts to avoid deadlocks
+    // ========== ENTER Critical Section ==========
+      if(fromAccount < toAccount)
+      { // 1. From, 2. To
+        workerData->accountPool->at(fromAccount).lock();
+        workerData->accountPool->at(toAccount).lock();
+      }
+      else
+      { // 1. To, 2. From
+        workerData->accountPool->at(toAccount).lock();
+        workerData->accountPool->at(fromAccount).lock();
+      }
+        // -- Get the balance
+        fromBalance = workerData->accountPool->at(fromAccount).getBalance();
+        toBalance = workerData->accountPool->at(toAccount).getBalance();
+
+        dbg_trace("[beforeProcess]: "\
+        << "From: " << fromBalance << " , "\
+        << "To: " << toBalance);
+
+        // -- Update the account with new balance
+        workerData->accountPool->at(fromAccount).setBalance(fromBalance - transferAmount);
+        workerData->accountPool->at(toAccount).setBalance(toBalance + transferAmount);
+        ++GlobalEFTRequestsCount;
+
+        dbg_trace("[AfterProcess]: "\
+        << "From: " << workerData->accountPool->at(fromAccount).getBalance() << " , "\
+        << "To: " << workerData->accountPool->at(toAccount).getBalance());
+
+      if(fromAccount < toAccount)
+      { // 1. To, 2. From
+        workerData->accountPool->at(toAccount).unlock();
+        workerData->accountPool->at(fromAccount).unlock();
+      }
+      else
+      { // 1. From, 2. To
+        workerData->accountPool->at(fromAccount).unlock();
+        workerData->accountPool->at(toAccount).unlock();
+      }
+
+    // ========= EXIT Critical Section =========
+    //displayAccountPool(workerData->accountPool);
+    delete[] requestToProcess;
+    requestToProcess = NULL;
+  }
   pthread_exit(NULL);
 }
 
 
 // Function to create thread data and spawn threads
 int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
-  bankAccountPool_t &accountPool, int NumberOfThreads)
+  bankAccountPool_t *accountPool, int NumberOfThreads)
 {
   threadData_t *threadPool = threadDataPool;
   pthread_t *threadID = threads;
-  bankAccountPool_t *accPool = &accountPool;
   bool spawnThreadsStatus = FAIL;
   int thread = 0;
 
@@ -47,7 +104,7 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   {
     threadPool[thread].threadID = thread;
     threadPool[thread].EFTRequests = new workerQueue(thread);
-    threadPool[thread].accountPool = accPool;
+    threadPool[thread].accountPool = accountPool;
     // Spwan it
     int status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
     if(status != 0){

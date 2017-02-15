@@ -8,12 +8,12 @@
 -->
 
 
-# ASP_Assignment3_CPP
-### Processing EFTs with worker threads (in C++ with POSIX Threads)
+## Advanced Systems Programming (ASP)
+#### Processing EFTs with worker threads (in C++ with POSIX Threads)
 
 In this	assignment,	you	are	going	to simulate electronic fund transfer (EFT) between bank accounts.
 
-We will assume that	there	is just	one	bank and several accounts. Your	program	will take	an	 input	file in	the	form
+We will assume that	there	is just	one	bank and several accounts. Your	program	will take	an	 input	file in	the	form:
 
 ```
 AccountNo1 <space> initialBalance1	  
@@ -35,7 +35,7 @@ Your program should	take one more	parameter	to denote the number of worker threa
 It is possible that an account may be overdrawn and gets a negative value while processing.
 Your program should output on the standard output the amount in each account (in the order specified in the input file) once all transfers are computed.
 
-### Usage of your program:
+#### Usage of your program:
 ```
 $ ./transfProg inputFile numWorkers
 ```

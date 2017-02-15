@@ -4,9 +4,11 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T05:47:18-05:00
+* @Last modified time: 2017-02-15T14:46:08-05:00
 */
 
+#ifndef __EFT_TRANSFER__
+#define __EFT_TRANSFER__
 
 #include <map>
 #include <vector>
@@ -16,7 +18,7 @@
 
 
 #define           LINE_BUFFER             50
-#define           MAX_WORKERS             1000
+#define           MAX_WORKERS             5000
 
 // Classes
 class bankAccount
@@ -84,4 +86,5 @@ typedef struct threadData {
 int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   bankAccountPool_t *accountPool, int NumberOfThreads);
 void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads);
-void displayAccountPool(bankAccountPool_t &accountPool);
+
+#endif

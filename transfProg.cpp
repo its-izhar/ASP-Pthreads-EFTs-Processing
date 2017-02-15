@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T05:42:03-05:00
+* @Last modified time: 2017-02-15T14:26:42-05:00
 */
 
 
@@ -20,11 +20,16 @@
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
 
+
 using namespace std;
+
+// Global
+// To save the order in which accounts are listed
+std::vector<int> accountList;
 
 
 /* Parse the input file into bank account pool and EFT requests pool */
-int parseInputFile(const char *fileName, threadData_t *threadData, \
+static int assignWorkers(const char *fileName, threadData_t *threadData, \
   bankAccountPool_t &accountPool, int NumberOfThreads, int &requestCount)
 {
   // Input file stream & buffer
@@ -63,6 +68,8 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
       dbg_trace("Account Number: " \
       << accountNumber << " , " << "Init Balance: " << initBalance);
 
+      // Keep the order of the accounts
+      accountList.push_back(accountNumber);
       // Adding the object to the map here
       accountPool.emplace(std::make_pair(accountNumber, \
         bankAccount(accountNumber, initBalance)));
@@ -161,10 +168,10 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
 
 
 /* display account pool */
-void displayAccountPool(bankAccountPool_t &accountPool)
+static void displayAccountPool(bankAccountPool_t &accountPool)
 {
   bankAccountIterator_t i;
-  for(i = accountPool.begin(); i != accountPool.end(); i++)
+  for(i = accountPool.begin(); i != accountPool.end(); ++i)
   {
     dbg_trace("POOL:\
     Account Number: " << i->second.getAccountNumber() \
@@ -173,6 +180,15 @@ void displayAccountPool(bankAccountPool_t &accountPool)
   }
 }
 
+/* Print the account and their balances to stdout */
+static void printAccounts(bankAccountPool_t &accountPool)
+{
+  std::vector<int>::iterator i;
+  for(i = accountList.begin(); i != accountList.end(); ++i)
+  {
+    print_output(*i << " " << accountPool[*i].getBalance());
+  }
+}
 
 // ------------------------ main() ------------------------------
 int main(int argc, char const *argv[])
@@ -210,7 +226,7 @@ int main(int argc, char const *argv[])
   }
 
   // And parse the file
-  int parseStatus = parseInputFile(argv[1], threadData, accountPool, \
+  int parseStatus = assignWorkers(argv[1], threadData, accountPool, \
     workerThreads, EFTRequestsCount);
   if(parseStatus == FAIL)
   {
@@ -225,6 +241,7 @@ int main(int argc, char const *argv[])
 
   // Display the Accounts and their Balances after transfer
   displayAccountPool(accountPool);
+  printAccounts(accountPool);
 
   // Cleanup
   destroyWorkerQueues(threadData, workerThreads);

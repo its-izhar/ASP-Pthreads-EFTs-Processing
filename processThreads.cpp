@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T05:34:26-05:00
+* @Last modified time: 2017-02-15T14:43:28-05:00
 */
 
 
@@ -43,7 +43,7 @@ static void *EFTWorker(void *data)
 
     // See if it the last job
     if(fromAccount == -1 || toAccount == -1){
-      delete[] requestToProcess;
+      delete requestToProcess;
       requestToProcess = NULL;
       break;
     }
@@ -86,10 +86,10 @@ static void *EFTWorker(void *data)
         workerData->accountPool->at(fromAccount).unlock();
         workerData->accountPool->at(toAccount).unlock();
       }
-
     // ========= EXIT Critical Section =========
-    //displayAccountPool(workerData->accountPool);
-    delete[] requestToProcess;
+
+    // Cleanup
+    delete requestToProcess;
     requestToProcess = NULL;
   }
   dbg_trace("THREAD: " << workerData->threadID << " EXIT!");

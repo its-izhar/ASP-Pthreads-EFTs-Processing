@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T15:07:30-05:00
+* @Last modified time: 2017-02-15T18:31:48-05:00
 */
 
 #ifndef __EFT_TRANSFER__
@@ -85,6 +85,8 @@ typedef struct threadData {
 // Functions for threads processing
 int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   bankAccountPool_t *accountPool, int NumberOfThreads);
+void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
+   int NumberOfThreads, int lastAssignedID);  
 void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads);
 
 #endif

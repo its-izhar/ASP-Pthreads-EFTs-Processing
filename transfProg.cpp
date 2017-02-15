@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T14:26:42-05:00
+* @Last modified time: 2017-02-15T18:37:46-05:00
 */
 
 
@@ -41,8 +41,6 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
   std::string transferString;
   bool initDone = false;
   int assignID = -1;
-  int noMoreRequests = false;
-  int lastWorker = 0;
 
   // Open the fileStream
   fileStream.open(fileName, std::ifstream::in);
@@ -51,7 +49,7 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
     return FAIL;
   }
   // Read from the file
-  while(fileStream.good() && !fileStream.eof())
+  while(fileStream.good())
   {
     fileStream.getline(line, LINE_BUFFER);          // read a line
     dbg_trace("String: " << line);
@@ -88,54 +86,33 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
 
       // Stop reading once we've reached invalid accounts i.e. EOF
       if(fromAccount == -1 || toAccount == -1){
-        noMoreRequests = true;
-      }
-      // We have proper account request, go ahead and assign it to next worker
-      // we won't need the last worker in this case
-      if(noMoreRequests == false){
-        lastWorker = -1;        // This will only execute the do-while loop just once
-      }
-      else {  // If we don't, then mark the end of the loop at current available worker
-        lastWorker = assignID;  // This will make the do-while execute for NumberOfThreads times
-        fromAccount = -1;
-        toAccount = -1;
-        transferAmount = 0;
-        //break;
+        continue;
       }
 
-      // This loop is added to give each worker a last job which will have
-      // both the from and to account numbers as -1 and the transferAmount 0
-      // The logic works irrespective of the number of threads and requests,
-      // as well as who was the last worker that got assigned the job
-      do {
-          // Calculate worker ID to be assigned
-          // Since we will be assigning the jobs in round robin fashion,
-          // we will mod the result with NumberOfThreads
-          assignID = (assignID + 1) % NumberOfThreads;
-          ++requestCount;
+      // Assign the job to next worker
+      assignID = (assignID + 1) % NumberOfThreads;
+      ++requestCount;
 
-          assert(threadData[assignID].threadID == assignID);    // Sanity checks
-          assert(threadData[assignID].threadID \
-            == threadData[assignID].EFTRequests->getWorkerID());
+      assert(threadData[assignID].threadID == assignID);    // Sanity checks
+      assert(threadData[assignID].threadID \
+        == threadData[assignID].EFTRequests->getWorkerID());
 
-          // Create new EFT request
-          EFTRequest_t* newRequest = new EFTRequest_t();
-          newRequest->workerID = assignID;
-          newRequest->fromAccount = fromAccount;
-          newRequest->toAccount = toAccount;
-          newRequest->transferAmount = transferAmount;
+      // Create new EFT request
+      EFTRequest_t* newRequest = new EFTRequest_t();
+      newRequest->workerID = assignID;
+      newRequest->fromAccount = fromAccount;
+      newRequest->toAccount = toAccount;
+      newRequest->transferAmount = transferAmount;
 
-          // Start writing;
-          // NOTE:: this is data-race safe since the workerQueue class implements
-          // safe IPC using mutex and condition varibales
-          threadData[assignID].EFTRequests->pushRequest(newRequest);
+      // Start writing;
+      // NOTE:: this is data-race safe since the workerQueue class implements
+      // safe IPC using mutex and condition varibales
+      threadData[assignID].EFTRequests->pushRequest(newRequest);
 
-          dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
-          << "Job Assigned ID: " << assignID << ","\
-          << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-          << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
-
-      } while((lastWorker != -1) && (assignID != lastWorker));
+      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      << "Job Assigned ID: " << assignID << ","\
+      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
     }
 
     // Clear the buffer here, before reading the next line
@@ -144,16 +121,14 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
     stringParser.clear();       // needed to clear the stringstream
     accountNumber = fromAccount = toAccount = -1;
     initBalance = transferAmount = 0;
-
-    // Exit the loop once we have done writing requests
-    if(noMoreRequests == true){
-      break;
-    }
   }
   // Check why we got out
-  if(fileStream.eof()){
+  if(fileStream.eof())
+  {
     dbg_trace("Reached End-of-File!");
     dbg_trace("Total Transfer Requests: " << requestCount);
+    // Ask all threads to terminate
+    askThreadsToExit(threadData, accountPool, NumberOfThreads, assignID);
   }
   else {
     dbg_trace("Error while reading!");

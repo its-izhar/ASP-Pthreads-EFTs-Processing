@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T15:03:59-05:00
+* @Last modified time: 2017-02-15T18:36:57-05:00
 */
 
 
@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <assert.h>
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
 
@@ -125,7 +126,7 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
 }
 
 
-// int threadPool cleanup
+// threadPool cleanup
 void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads)
 {
   threadData_t *threadPool = threadDataPool;
@@ -134,4 +135,60 @@ void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads)
     delete threadPool[NumberOfThreads].EFTRequests;
   }
   threadDataPool->EFTRequests = NULL;
+}
+
+
+// Ask threads to terminate
+void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
+   int NumberOfThreads, int lastAssignedID)
+{
+  int fromAccount = -1, toAccount = -1, transferAmount = 0;
+  int assignID = lastAssignedID;
+  int requestCount = 0;
+
+  // the last job
+  fromAccount = -1;
+  toAccount = -1;
+  transferAmount = 0;
+
+  // Sanity checks
+  if(lastAssignedID == -1 || NumberOfThreads < 0){
+    return;
+  }
+
+  // This loop is added to give each worker a last job which will have
+  // both the from and to account numbers as -1 and the transferAmount 0
+  // The logic works irrespective of the number of threads and requests,
+  // as well as who was the last worker that got assigned the job
+  do {
+      // Calculate worker ID to be assigned
+      // Since we will be assigning the jobs in round robin fashion,
+      // we will mod the result with NumberOfThreads
+      assignID = (assignID + 1) % NumberOfThreads;
+      ++requestCount;
+
+      assert(threadData[assignID].threadID == assignID);    // Sanity checks
+      assert(threadData[assignID].threadID \
+        == threadData[assignID].EFTRequests->getWorkerID());
+
+      // Create new EFT request
+      EFTRequest_t* newRequest = new EFTRequest_t();
+      newRequest->workerID = assignID;
+      newRequest->fromAccount = fromAccount;
+      newRequest->toAccount = toAccount;
+      newRequest->transferAmount = transferAmount;
+
+      // Start writing;
+      // NOTE:: this is data-race safe since the workerQueue class implements
+      // safe IPC using mutex and condition varibales
+      threadData[assignID].EFTRequests->pushRequest(newRequest);
+
+      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      << "Job Assigned ID: " << assignID << ","\
+      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
+
+  } while(assignID != lastAssignedID);
+
+  dbg_trace("Total Last Jobs: " << requestCount);
 }

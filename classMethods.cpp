@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T18:20:25-05:00
+* @Last modified time: 2017-02-14T19:20:39-05:00
 */
 
 
@@ -141,21 +141,31 @@ EFTRequest_t* workerQueue :: popRequest()
   EFTRequest_t *request = NULL;
   // Check if the queue is emptyCondition & proceed if not
   this->lock();
-  while(this->empty()){
+  while(this->Queue.empty()){
     pthread_cond_wait(&emptyCondition, &mutex);
   }
-  request = Queue.front();
+  request = this->Queue.front();
   this->Queue.pop();
   this->unlock();
   return request;
 }
 
 // checks if the queue is empty
-bool workerQueue :: empty(){
-  return this->Queue.empty();
+bool workerQueue :: empty()
+{
+  bool status = false;
+  this->lock();
+  status = this->Queue.empty();
+  this->unlock();
+  return status;
 }
 
 // returns queue size
-int workerQueue :: size(){
-  return this->Queue.size();
+int workerQueue :: size()
+{
+  int size = -1;
+  this->lock();
+  size = this->Queue.size();
+  this->unlock();
+  return size;
 }

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T18:43:12-05:00
+* @Last modified time: 2017-02-14T19:22:11-05:00
 */
 
 
@@ -90,11 +90,6 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
       assert(threadData[assignID].threadID \
         == threadData[assignID].EFTRequests->getWorkerID());
 
-      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
-      << "Job Assigned ID: " << assignID << ","\
-      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
-
       // Create new EFT request
       EFTRequest_t* newRequest = new EFTRequest_t();
       newRequest->workerID = assignID;
@@ -106,6 +101,11 @@ int parseInputFile(const char *fileName, threadData_t *threadData, \
       // NOTE:: this is data-race safe since the workerQueue class implements
       // safe IPC using mutex and condition varibales
       threadData[assignID].EFTRequests->pushRequest(newRequest);
+
+      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      << "Job Assigned ID: " << assignID << ","\
+      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
     }
 
     // Clear the buffer here, before reading the next line
@@ -188,7 +188,8 @@ int main(int argc, char const *argv[])
     return 0;
   }
   // Display account pool details
-  displayAccountPool(accountPool);
+  // NOTE:: REMOVE Comment
+  //displayAccountPool(accountPool);
 
   // wait for threads to finish
   for(int i=0; i<workerThreads; i++){

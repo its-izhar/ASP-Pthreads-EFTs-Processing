@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-14T18:12:58-05:00
+* @Last modified time: 2017-02-14T19:21:50-05:00
 */
 
 
@@ -23,8 +23,11 @@ using namespace std;
 static void *EFTWorker(void *data)
 {
   threadData_t *workerData = (threadData_t *) data;
-  dbg_trace("Thread " << workerData->threadID << " sleeping ..");
-  sleep(rand()%5);
+  sleep(1);
+  dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
+  << "Queue-ID: " << workerData->EFTRequests->getWorkerID() << " , "\
+  << "Queue-size: " << workerData->EFTRequests->size() << " , "\
+  << "Account Pool: " << workerData->accountPool->size());
   dbg_trace("Thread " << workerData->threadID << " woke up!");
   pthread_exit(NULL);
 }

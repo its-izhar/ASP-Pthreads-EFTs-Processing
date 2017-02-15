@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T14:43:28-05:00
+* @Last modified time: 2017-02-15T15:03:59-05:00
 */
 
 
@@ -114,7 +114,7 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
     // Spwan it
     int status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
     if(status != 0){
-      dbg_trace("Failed to create thread: " << thread);
+      print_output("Failed to create thread: " << thread);
       exit(1);
     }
   }

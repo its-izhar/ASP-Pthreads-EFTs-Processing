@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T14:46:08-05:00
+* @Last modified time: 2017-02-15T15:07:30-05:00
 */
 
 #ifndef __EFT_TRANSFER__
@@ -18,7 +18,7 @@
 
 
 #define           LINE_BUFFER             50
-#define           MAX_WORKERS             5000
+#define           MAX_WORKERS             20000
 
 // Classes
 class bankAccount
@@ -26,7 +26,7 @@ class bankAccount
 private:
   int number;     // Account Number
   int balance;    // Balance
-  pthread_mutex_t mutex;    // Mutex to protect read/write access to the acc
+  pthread_mutex_t mutex;    // Mutexcle to protect read/write access to the acc
 
 public:
   bankAccount();                    // Default Constructor

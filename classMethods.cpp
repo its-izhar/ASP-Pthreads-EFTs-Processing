@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T04:57:02-05:00
+* @Last modified time: 2017-02-15T15:02:45-05:00
 */
 
 
@@ -25,7 +25,9 @@ bankAccount :: bankAccount(int accountNumber, int initBalance){
   this->balance = initBalance;
   bool mutexStatus = pthread_mutex_init(&mutex, NULL);
   if(mutexStatus != 0){
-    dbg_trace("Mutex init failed!");
+    print_output("Mutex init failed: "\
+    << "Acc: " << accountNumber << " , "\
+    << "Balance: " << initBalance);
     exit(1);
   }
 }
@@ -85,12 +87,12 @@ workerQueue :: workerQueue(int ID){
   this->workerID = ID;
   bool mutexStatus = pthread_mutex_init(&mutex, NULL);
   if(mutexStatus != 0){
-    dbg_trace("Mutex init failed! Worker ID: " << workerID);
+    print_output("Mutex init failed! Worker ID: " << workerID);
     exit(1);
   }
   bool condStatus = pthread_cond_init(&emptyCondition, NULL);
   if(condStatus != 0){
-    dbg_trace("Cond init failed! Worker ID: " << workerID);
+    print_output("Cond init failed! Worker ID: " << workerID);
     exit(1);
   }
 }

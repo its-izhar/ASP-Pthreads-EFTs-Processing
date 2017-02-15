@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T01:33:54-05:00
+* @Last modified time: 2017-02-15T04:57:02-05:00
 */
 
 
@@ -17,7 +17,6 @@
 
 using namespace std;
 
-extern int mainDone;
 
 // ------------------------ Class: bankAccount ------------------------------
 // Constructor
@@ -143,12 +142,8 @@ EFTRequest_t* workerQueue :: popRequest()
   EFTRequest_t *request = NULL;
   // Check if the queue is emptyCondition & proceed if not
   this->lock();
-  while(this->Queue.empty() && mainDone == false){
+  while(this->Queue.empty()){
     pthread_cond_wait(&emptyCondition, &mutex);
-  }
-  if(this->Queue.empty() && mainDone == true){
-    this->unlock();
-    return NULL;
   }
   request = this->Queue.front();
   this->Queue.pop();
@@ -174,9 +169,4 @@ int workerQueue :: size()
   size = this->Queue.size();
   this->unlock();
   return size;
-}
-
-void workerQueue :: sendSignal()
-{
-  pthread_cond_signal(&emptyCondition);
 }

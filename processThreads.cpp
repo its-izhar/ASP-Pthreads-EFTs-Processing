@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T01:24:27-05:00
+* @Last modified time: 2017-02-15T05:34:26-05:00
 */
 
 
@@ -17,7 +17,6 @@
 
 using namespace std;
 
-extern int GlobalEFTRequestsCount;
 
 // Thread function (EFT requests processor)
 static void *EFTWorker(void *data)
@@ -42,6 +41,13 @@ static void *EFTWorker(void *data)
     << "To: " << toAccount << " , "\
     << "Transfer: " << transferAmount);
 
+    // See if it the last job
+    if(fromAccount == -1 || toAccount == -1){
+      delete[] requestToProcess;
+      requestToProcess = NULL;
+      break;
+    }
+
     // -- Process the request with "restricted order" of accounts to avoid deadlocks
     // ========== ENTER Critical Section ==========
       if(fromAccount < toAccount)
@@ -65,7 +71,6 @@ static void *EFTWorker(void *data)
         // -- Update the account with new balance
         workerData->accountPool->at(fromAccount).setBalance(fromBalance - transferAmount);
         workerData->accountPool->at(toAccount).setBalance(toBalance + transferAmount);
-        ++GlobalEFTRequestsCount;
 
         dbg_trace("[AfterProcess]: "\
         << "From: " << workerData->accountPool->at(fromAccount).getBalance() << " , "\
@@ -87,6 +92,7 @@ static void *EFTWorker(void *data)
     delete[] requestToProcess;
     requestToProcess = NULL;
   }
+  dbg_trace("THREAD: " << workerData->threadID << " EXIT!");
   pthread_exit(NULL);
 }
 

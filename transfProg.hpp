@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T00:42:23-05:00
+* @Last modified time: 2017-02-15T05:47:18-05:00
 */
 
 
@@ -16,7 +16,7 @@
 
 
 #define           LINE_BUFFER             50
-#define           MAX_WORKERS             100
+#define           MAX_WORKERS             1000
 
 // Classes
 class bankAccount
@@ -70,8 +70,6 @@ public:
   int size();                       // returns the current size of the queue
   void pushRequest(EFTRequest_t *request); // Adds the item to the the back
   EFTRequest_t *popRequest();              // removes the item from the front
-  //TODO:: Remove
-  void sendSignal();
 };
 
 // Thread Data

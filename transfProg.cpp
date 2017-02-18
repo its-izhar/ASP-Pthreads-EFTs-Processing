@@ -2,9 +2,9 @@
 * @Author: Izhar Shaikh
 * @Date:   2017-02-13T15:55:33-05:00
 * @Email:  izharits@gmail.com
-* @Filename: transfProg.c
-* @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-18T15:51:11-05:00
+* @Filename: transfProg.cpp
+* @Last modified by:   izhar
+* @Last modified time: 2017-02-18T16:41:07-05:00
 */
 
 
@@ -66,6 +66,10 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
       dbg_trace("Account Number: " \
       << accountNumber << " , " << "Init Balance: " << initBalance);
 
+      if(accountNumber == -1){
+        goto CLEAR;
+      }
+
       // Keep the order of the accounts
       accountList.push_back(accountNumber);
       // Adding the object to the map here
@@ -86,7 +90,7 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
 
       // Stop reading once we've reached invalid accounts i.e. EOF
       if(fromAccount == -1 || toAccount == -1){
-        continue;
+        goto CLEAR;
       }
 
       // Assign the job to next worker
@@ -115,6 +119,7 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
       << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");*/
     }
 
+CLEAR:
     // Clear the buffer here, before reading the next line
     memset(line, '\0', LINE_BUFFER);
     stringParser.str("");       // Clear the stringstream

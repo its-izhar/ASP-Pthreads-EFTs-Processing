@@ -3,8 +3,8 @@
 * @Date:   2017-02-13T15:55:33-05:00
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
-* @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-18T16:01:58-05:00
+* @Last modified by:   izhar
+* @Last modified time: 2017-02-18T17:30:14-05:00
 */
 
 
@@ -20,7 +20,7 @@ using namespace std;
 
 // ------------------------ Class: bankAccount ------------------------------
 // Constructor
-bankAccount :: bankAccount(int accountNumber, int initBalance){
+bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
   this->number = accountNumber;
   this->balance = initBalance;
   bool mutexStatus = pthread_mutex_init(&mutex, NULL);
@@ -45,37 +45,37 @@ bankAccount :: ~bankAccount(){
 }
 
 // locks the account access
-int bankAccount :: lock(){
+int64_t bankAccount :: lock(){
   // lock mutex
   return pthread_mutex_lock(&mutex);
 }
 
 // try to lock the account access; returns otherwise
-int bankAccount :: trylock(){
+int64_t bankAccount :: trylock(){
   // try to lock mutex
   return pthread_mutex_trylock(&mutex);
 }
 
 // releases the account access to the account
-int bankAccount :: unlock(){
+int64_t bankAccount :: unlock(){
   // unlock mutex
   return pthread_mutex_unlock(&mutex);
 }
 
 // retrieves account balance
-int bankAccount :: getBalance(){
+int64_t bankAccount :: getBalance(){
   // get the current balance
   return this->balance;
 }
 
 // retrieves account number
-int bankAccount :: getAccountNumber(){
+int64_t bankAccount :: getAccountNumber(){
   // get the current balance
   return this->number;
 }
 
 // Destructor
-void bankAccount :: setBalance(int newBalance){
+void bankAccount :: setBalance(int64_t newBalance){
   // update the balance
   this->balance = newBalance;
 }
@@ -107,12 +107,12 @@ workerQueue :: ~workerQueue(){
 }
 
 // retrieves workerQueue ID
-int workerQueue :: getWorkerID(){
+int64_t workerQueue :: getWorkerID(){
   return this->workerID;
 }
 
 // sets worker queue ID
-void workerQueue :: setWorkerID(int ID){
+void workerQueue :: setWorkerID(int64_t ID){
   this->workerID = ID;
 }
 

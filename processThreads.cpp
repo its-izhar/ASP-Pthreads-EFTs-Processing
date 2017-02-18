@@ -3,8 +3,8 @@
 * @Date:   2017-02-13T15:55:33-05:00
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
-* @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-18T16:09:45-05:00
+* @Last modified by:   izhar
+* @Last modified time: 2017-02-18T17:29:56-05:00
 */
 
 
@@ -33,10 +33,10 @@ static void *EFTWorker(void *data)
     << "Queue-size: " << workerData->EFTRequests->size() << " , "\
     << "Account Pool: " << workerData->accountPool->size());*/
 
-    int fromBalance = 0, toBalance = 0;
-    int fromAccount = requestToProcess->fromAccount;
-    int toAccount = requestToProcess->toAccount;
-    int transferAmount = requestToProcess->transferAmount;
+    int64_t fromBalance = 0, toBalance = 0;
+    int64_t fromAccount = requestToProcess->fromAccount;
+    int64_t toAccount = requestToProcess->toAccount;
+    int64_t transferAmount = requestToProcess->transferAmount;
 
     /*dbg_trace("[requestToProcess]: "\
     << "From: " << fromAccount << " , "\
@@ -100,13 +100,13 @@ static void *EFTWorker(void *data)
 
 
 // Function to create thread data and spawn threads
-int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
-  bankAccountPool_t *accountPool, int NumberOfThreads)
+int64_t spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
+  bankAccountPool_t *accountPool, int64_t NumberOfThreads)
 {
   threadData_t *threadPool = threadDataPool;
   pthread_t *threadID = threads;
   bool spawnThreadsStatus = FAIL;
-  int thread = 0;
+  int64_t thread = 0;
 
   for(thread = 0; thread < NumberOfThreads; thread++)
   {
@@ -114,7 +114,7 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
     threadPool[thread].EFTRequests.setWorkerID(thread);
     threadPool[thread].accountPool = accountPool;
     // Spwan it
-    int status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
+    int64_t status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
     if(status != 0){
       print_output("Failed to create thread: " << thread);
       exit(1);
@@ -130,11 +130,11 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
 
 // Ask threads to terminate
 void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
-   int NumberOfThreads, int lastAssignedID)
+   int64_t NumberOfThreads, int64_t lastAssignedID)
 {
-  int fromAccount = -1, toAccount = -1, transferAmount = 0;
-  int assignID = lastAssignedID;
-  int requestCount = 0;
+  int64_t fromAccount = -1, toAccount = -1, transferAmount = 0;
+  int64_t assignID = lastAssignedID;
+  int64_t requestCount = 0;
 
   // the last job
   fromAccount = -1;

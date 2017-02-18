@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-02-18T16:41:07-05:00
+* @Last modified time: 2017-02-18T17:29:22-05:00
 */
 
 
@@ -25,22 +25,22 @@ using namespace std;
 
 // Global
 // To save the order in which accounts are listed
-std::vector<int> accountList;
+std::vector<int64_t> accountList;
 
 
 /* Parse the input file into bank account pool and EFT requests pool */
-static int assignWorkers(const char *fileName, threadData_t *threadData, \
-  bankAccountPool_t &accountPool, int NumberOfThreads, int &requestCount)
+static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
+  bankAccountPool_t &accountPool, int64_t NumberOfThreads, int64_t &requestCount)
 {
   // Input file stream & buffer
   std::ifstream fileStream;
   std::stringstream stringParser;
   char line[LINE_BUFFER] = { 0 };
-  int accountNumber = -1, initBalance = 0;
-  int fromAccount = -1, toAccount = -1, transferAmount = 0;
+  int64_t accountNumber = -1, initBalance = 0;
+  int64_t fromAccount = -1, toAccount = -1, transferAmount = 0;
   std::string transferString;
   bool initDone = false;
-  int assignID = -1;
+  int64_t assignID = -1;
 
   // Open the fileStream
   fileStream.open(fileName, std::ifstream::in);
@@ -165,7 +165,7 @@ static void displayAccountPool(bankAccountPool_t &accountPool)
 /* Print the account and their balances to stdout */
 static void printAccounts(bankAccountPool_t &accountPool)
 {
-  std::vector<int>::iterator i;
+  std::vector<int64_t>::iterator i;
   for(i = accountList.begin(); i != accountList.end(); ++i)
   {
     print_output(*i << " " << accountPool[*i].getBalance());
@@ -182,14 +182,14 @@ int main(int argc, char const *argv[])
     return 0;
   }
   // Check the validity of the input file,
-  int fileStatus = access(argv[1], F_OK | R_OK);
+  int64_t fileStatus = access(argv[1], F_OK | R_OK);
   if(fileStatus != 0){
     print_output("Failed to access the input file or file doesn't exist!");
     print_output("Please check the path to the input file is correct.");
     return 0;
   }
   // Check the validity of the worker threads
-  int workerThreads = atoi((const char *) argv[2]);
+  int64_t workerThreads = atoi((const char *) argv[2]);
   if(workerThreads < 1 || workerThreads > MAX_WORKERS){
     print_output("Invalid number of workers: " << workerThreads \
      << "\nEnter buffer size between 1 to " << MAX_WORKERS);
@@ -199,7 +199,7 @@ int main(int argc, char const *argv[])
   bankAccountPool_t accountPool;                // Pool of bank accounts
   threadData_t threadData[workerThreads];       // thread data array
   pthread_t threads[workerThreads];             // pthreads ID array
-  int EFTRequestsCount = 0;
+  int64_t EFTRequestsCount = 0;
 
   bool status = spawnThreads(threads, threadData, &accountPool, workerThreads);
   if(status == FAIL){
@@ -208,7 +208,7 @@ int main(int argc, char const *argv[])
   }
 
   // And parse the file
-  int parseStatus = assignWorkers(argv[1], threadData, accountPool, \
+  int64_t parseStatus = assignWorkers(argv[1], threadData, accountPool, \
     workerThreads, EFTRequestsCount);
   if(parseStatus == FAIL)
   {
@@ -217,7 +217,7 @@ int main(int argc, char const *argv[])
   }
 
   // wait for threads to finish
-  for(int i=0; i<workerThreads; i++){
+  for(int64_t i=0; i<workerThreads; i++){
     pthread_join(threads[i], NULL);
   }
 

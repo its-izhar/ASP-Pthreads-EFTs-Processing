@@ -62,3 +62,20 @@ your program should produce the following output regardless of the number of wor
 ```
 
 your solution should maximize concurrency, be free of race conditions and deadlocks,and produce the correct output.You can use mutexes and condition variables and/or semaphores for synchronizing your threads.
+
+
+## Implementation
+
+1. main() spawns the threads as soon as it receives inputFile and workerThreads as cmd line arguments.
+
+2. Each worker has it's own worker queue and it's own ID. Once threads are spawned, they all wait for the jobs.
+
+3. main() starts parsing the input file and starts putting account numbers and the balances in the accountPool.
+
+4. Once main receives the first EFT Transfer request, it parses it and assigns it to the first thread, then reads the next request and assigns it to the second thread and so on (round-robin) fashion. This is achieved by main() using the workerQueue of each worker. Each workerQueue has a counting semaphore and a binary semaphore that is used for synchronizing mechanism with main().
+
+5. As soon as any worker receives it's first EFT Transfer request, it goes onto processing it. For the processing, all workers have to synchronize among themselves as the accounts requested in each transfer request might be requested in other requests as well which are handled by other workers. For this, the Implementation involves an associated lock with each account in the account pool. Whenever two workers try to access the same account details, they will proceed with the locking scheme, and one of them will be able to get the access, while other will wait. Please check the thread function comments for exact Implementation details incorporated for avoiding deadlock.
+
+6. Once main() is finished assigning jobs, main asks the workers to exit by assigning one last job, which is marked by both account numbers as non-negative numbers, one worker realizes the current job is the last job, it exits.
+
+7. After all threads are successfully terminated, main() prints the accounts and their balances in the order they were received initially.

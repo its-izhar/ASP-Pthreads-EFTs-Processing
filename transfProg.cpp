@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T18:37:46-05:00
+* @Last modified time: 2017-02-18T15:51:11-05:00
 */
 
 
@@ -95,7 +95,7 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
 
       assert(threadData[assignID].threadID == assignID);    // Sanity checks
       assert(threadData[assignID].threadID \
-        == threadData[assignID].EFTRequests->getWorkerID());
+        == threadData[assignID].EFTRequests.getWorkerID());
 
       // Create new EFT request
       EFTRequest_t* newRequest = new EFTRequest_t();
@@ -107,12 +107,12 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
       // Start writing;
       // NOTE:: this is data-race safe since the workerQueue class implements
       // safe IPC using mutex and condition varibales
-      threadData[assignID].EFTRequests->pushRequest(newRequest);
+      threadData[assignID].EFTRequests.pushRequest(newRequest);
 
-      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      /*dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
       << "Job Assigned ID: " << assignID << ","\
       << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");*/
     }
 
     // Clear the buffer here, before reading the next line
@@ -142,6 +142,7 @@ static int assignWorkers(const char *fileName, threadData_t *threadData, \
 }
 
 
+#if 0
 /* display account pool */
 static void displayAccountPool(bankAccountPool_t &accountPool)
 {
@@ -154,6 +155,7 @@ static void displayAccountPool(bankAccountPool_t &accountPool)
     "Balance: " << i->second.getBalance());
   }
 }
+#endif
 
 /* Print the account and their balances to stdout */
 static void printAccounts(bankAccountPool_t &accountPool)
@@ -189,9 +191,9 @@ int main(int argc, char const *argv[])
     return 0;
   }
   // If everything is fine, init threads
-  bankAccountPool_t accountPool;
-  threadData_t threadData[workerThreads];
-  pthread_t threads[workerThreads];
+  bankAccountPool_t accountPool;                // Pool of bank accounts
+  threadData_t threadData[workerThreads];       // thread data array
+  pthread_t threads[workerThreads];             // pthreads ID array
   int EFTRequestsCount = 0;
 
   bool status = spawnThreads(threads, threadData, &accountPool, workerThreads);
@@ -215,11 +217,7 @@ int main(int argc, char const *argv[])
   }
 
   // Display the Accounts and their Balances after transfer
-  displayAccountPool(accountPool);
   printAccounts(accountPool);
-
-  // Cleanup
-  destroyWorkerQueues(threadData, workerThreads);
 
   return 0;
 }

@@ -4,11 +4,12 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.c
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T18:36:57-05:00
+* @Last modified time: 2017-02-18T16:09:45-05:00
 */
 
 
 #include <iostream>
+#include <memory>
 #include <pthread.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -25,24 +26,24 @@ static void *EFTWorker(void *data)
   threadData_t *workerData = (threadData_t *) data;
   EFTRequest_t *requestToProcess = NULL;
 
-  while((requestToProcess = workerData->EFTRequests->popRequest()) != NULL)
+  while((requestToProcess = workerData->EFTRequests.popRequest()) != NULL)
   {
-    dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
+    /*dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
     << "Queue-ID: " << workerData->EFTRequests->getWorkerID() << " , "\
     << "Queue-size: " << workerData->EFTRequests->size() << " , "\
-    << "Account Pool: " << workerData->accountPool->size());
+    << "Account Pool: " << workerData->accountPool->size());*/
 
     int fromBalance = 0, toBalance = 0;
     int fromAccount = requestToProcess->fromAccount;
     int toAccount = requestToProcess->toAccount;
     int transferAmount = requestToProcess->transferAmount;
 
-    dbg_trace("[requestToProcess]: "\
+    /*dbg_trace("[requestToProcess]: "\
     << "From: " << fromAccount << " , "\
     << "To: " << toAccount << " , "\
-    << "Transfer: " << transferAmount);
+    << "Transfer: " << transferAmount);*/
 
-    // See if it the last job
+    // See if it is the last job
     if(fromAccount == -1 || toAccount == -1){
       delete requestToProcess;
       requestToProcess = NULL;
@@ -65,17 +66,17 @@ static void *EFTWorker(void *data)
         fromBalance = workerData->accountPool->at(fromAccount).getBalance();
         toBalance = workerData->accountPool->at(toAccount).getBalance();
 
-        dbg_trace("[beforeProcess]: "\
+        /*dbg_trace("[beforeProcess]: "\
         << "From: " << fromBalance << " , "\
-        << "To: " << toBalance);
+        << "To: " << toBalance);*/
 
         // -- Update the account with new balance
         workerData->accountPool->at(fromAccount).setBalance(fromBalance - transferAmount);
         workerData->accountPool->at(toAccount).setBalance(toBalance + transferAmount);
 
-        dbg_trace("[AfterProcess]: "\
+        /*dbg_trace("[AfterProcess]: "\
         << "From: " << workerData->accountPool->at(fromAccount).getBalance() << " , "\
-        << "To: " << workerData->accountPool->at(toAccount).getBalance());
+        << "To: " << workerData->accountPool->at(toAccount).getBalance());*/
 
       if(fromAccount < toAccount)
       { // 1. To, 2. From
@@ -110,7 +111,7 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   for(thread = 0; thread < NumberOfThreads; thread++)
   {
     threadPool[thread].threadID = thread;
-    threadPool[thread].EFTRequests = new workerQueue(thread);
+    threadPool[thread].EFTRequests.setWorkerID(thread);
     threadPool[thread].accountPool = accountPool;
     // Spwan it
     int status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
@@ -125,17 +126,6 @@ int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   return spawnThreadsStatus;
 }
 
-
-// threadPool cleanup
-void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads)
-{
-  threadData_t *threadPool = threadDataPool;
-  while(NumberOfThreads){
-    --NumberOfThreads;
-    delete threadPool[NumberOfThreads].EFTRequests;
-  }
-  threadDataPool->EFTRequests = NULL;
-}
 
 
 // Ask threads to terminate
@@ -169,7 +159,7 @@ void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
 
       assert(threadData[assignID].threadID == assignID);    // Sanity checks
       assert(threadData[assignID].threadID \
-        == threadData[assignID].EFTRequests->getWorkerID());
+        == threadData[assignID].EFTRequests.getWorkerID());
 
       // Create new EFT request
       EFTRequest_t* newRequest = new EFTRequest_t();
@@ -180,15 +170,15 @@ void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
 
       // Start writing;
       // NOTE:: this is data-race safe since the workerQueue class implements
-      // safe IPC using mutex and condition varibales
-      threadData[assignID].EFTRequests->pushRequest(newRequest);
+      // race safe mechanism to write and read from worker queue using semaphores
+      threadData[assignID].EFTRequests.pushRequest(newRequest);
 
-      dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
+      /*dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
       << "Job Assigned ID: " << assignID << ","\
       << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");
+      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");*/
 
   } while(assignID != lastAssignedID);
 
-  dbg_trace("Total Last Jobs: " << requestCount);
+  // dbg_trace("Total Last Jobs: " << requestCount);
 }

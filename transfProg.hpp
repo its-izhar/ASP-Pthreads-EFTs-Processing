@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   Izhar Shaikh
-* @Last modified time: 2017-02-15T18:31:48-05:00
+* @Last modified time: 2017-02-18T16:10:53-05:00
 */
 
 #ifndef __EFT_TRANSFER__
@@ -14,14 +14,15 @@
 #include <vector>
 #include <queue>
 #include <pthread.h>
+#include <semaphore.h>
 #include "debugMacros.hpp"
 
 
 #define           LINE_BUFFER             50
-#define           MAX_WORKERS             20000
+#define           MAX_WORKERS             10000
 
 // Classes
-class bankAccount
+typedef class bankAccount
 {
 private:
   int number;     // Account Number
@@ -38,47 +39,43 @@ public:
   int getAccountNumber();           // retrieves account number
   int getBalance();                 // retrieves account balance
   void setBalance(int newBalance);  // sets account balance
-};
+} bankAccount_t;
 
 // Typedefs
-typedef std::map<int, bankAccount> bankAccountPool_t;
+typedef std::map<int, bankAccount_t> bankAccountPool_t;
 typedef bankAccountPool_t::iterator bankAccountIterator_t;
 
 // Item for work queue
 typedef struct EFTRequest {
+  int workerID;
   int fromAccount;
   int toAccount;
   int transferAmount;
-  int workerID;
 } EFTRequest_t;
 
 // FIFO queue for each worker
-class workerQueue
+typedef class workerQueue
 {
 private:
   int workerID;
   std::queue<EFTRequest_t*> Queue;
-  pthread_mutex_t mutex;
-  pthread_cond_t emptyCondition;
+  sem_t goodToRead;                         // Sem to indicate worker to proceed
+  sem_t mutex;                              // Mutex for rw sync
 
 public:
-  workerQueue(int workerID);
-  ~workerQueue();
-  int lock();                       // Lock the access to queue
-  int trylock();                    // Lock the access to queue
-  int unlock();                     // releases the access to queue
-  int getWorkerID();                // retrieves the worker ID
-  bool empty();                     // returns true if the queue is empty
-  int size();                       // returns the current size of the queue
-  void pushRequest(EFTRequest_t *request); // Adds the item to the the back
-  EFTRequest_t *popRequest();              // removes the item from the front
-};
+  workerQueue();                            // Constructor
+  ~workerQueue();                           // Destructor
+  int getWorkerID();                        // retrieves the worker ID
+  void setWorkerID(int ID);                 // sets worker ID
+  void pushRequest(EFTRequest_t *request);  // Adds the item from the the back
+  EFTRequest_t *popRequest();               // removes the item from the front
+} workerQueue_t;
 
 // Thread Data
 typedef struct threadData {
-  int threadID;
-  workerQueue *EFTRequests;
-  bankAccountPool_t *accountPool;
+  int threadID;                             // Each thread has it's own ID
+  workerQueue_t EFTRequests;                // Each thread has it's own queue
+  bankAccountPool_t *accountPool;           // Each thread has access to common account pool
 } threadData_t;
 
 
@@ -86,7 +83,6 @@ typedef struct threadData {
 int spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
   bankAccountPool_t *accountPool, int NumberOfThreads);
 void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
-   int NumberOfThreads, int lastAssignedID);  
-void destroyWorkerQueues(threadData_t *threadDataPool, int NumberOfThreads);
+   int NumberOfThreads, int lastAssignedID);
 
 #endif
